@@ -8,15 +8,29 @@ import com.codewithme.smartqueue.enums.HospitalStatus;
 import com.codewithme.smartqueue.exception.InvalidOperationException;
 import com.codewithme.smartqueue.exception.ResourceNotFoundException;
 import com.codewithme.smartqueue.repository.HospitalRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
+
 @Service
 public class HospitalService {
 
     private final HospitalRepository hospitalRepository;
+
+    private static final List<String> allowedSortFields = List.of(
+            "hospitalName",
+            "hospitalCode",
+            "city",
+            "state",
+            "createdAt"
+    );
 
     public HospitalService(HospitalRepository hospitalRepository){
         this.hospitalRepository=hospitalRepository;
@@ -57,18 +71,63 @@ public class HospitalService {
         response.setStatus(hospital.getStatus());
         response.setCreatedAt(hospital.getCreatedAt());
         response.setUpdatedAt(hospital.getUpdatedAt());
-  public List<HospitalResponse> getAllHospitals(){
 
-        List<Hospital> hospitals = hospitalRepository.findByActiveTrue();
+        return response;
+    }
 
-        List<HospitalResponse> responses = new ArrayList<>();
+  public Page<HospitalResponse> getAllHospitals(
+          int page,
+          int size,
+          String sortBy,
+          String direction,
+          String city){
 
-        for(Hospital hospital:hospitals){
-            HospitalResponse response = mapToHospitalResponse(hospital);
-            responses.add(response);
+        //validate direction
+        Sort.Direction sortDirection;
+
+        try{
+            sortDirection = Sort.Direction.valueOf(direction.toUpperCase());
+        }
+        catch (IllegalArgumentException ex){
+            throw new InvalidOperationException(
+                    "Sort Direction must be ASC or DESC"
+            );
         }
 
-        return responses;
+        //validate sortBy
+        if(!allowedSortFields.contains(sortBy)){
+            throw new InvalidOperationException(
+                    "Invalid sort Field: " + sortBy
+            );
+        }
+
+
+        //creating pageable
+        Pageable pageable= PageRequest.of(
+                page,
+                size,
+                Sort.by(sortDirection,sortBy));
+
+        //validation of city
+        if(city != null && city.isBlank()){
+            throw new InvalidOperationException(
+                    "city cannot be black"
+            );
+        }
+
+        //repository call
+        Page<Hospital> hospitals;
+
+        if(city == null){
+            hospitals = hospitalRepository.findByActiveTrue(pageable);
+
+        }
+        else{
+            hospitals = hospitalRepository.findByActiveTrueAndCity(city , pageable);
+        }
+
+        //map Entity->DTO
+        return hospitals.map(this::mapToHospitalResponse);
     }
 
     //get by id
@@ -103,7 +162,7 @@ public class HospitalService {
                 .orElseThrow(()-> new ResourceNotFoundException("Hospital Not Found with id :" + id));
 
         if(!hospital.isActive()){
-            throw new InvalidOperationException("Hospital is Already incative");
+            throw new InvalidOperationException("Hospital is Already inactive");
         }
 
         hospital.setActive(false);
