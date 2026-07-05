@@ -122,7 +122,7 @@ public class DepartmentService {
 
         //repository call
         Page<Department> departments =
-                departmentRepository.findByActiveTrue(pageable);;
+                departmentRepository.findByActiveTrue(pageable);
 
 
 
