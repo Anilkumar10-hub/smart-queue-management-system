@@ -1,9 +1,6 @@
 package com.codewithme.smartqueue.dto.request;
 
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,7 +21,7 @@ public class CreateAppointmentRequest {
     private Long departmentId;
 
     @NotNull(message = "Appointment Date is required.")
-    @Future(message = "Appointment date must be in the future.")
+    @FutureOrPresent(message = "Appointment date must be in the future or present.")
     private LocalDate appointmentDate;
 
     @NotNull(message = "Appointment Time is required.")
